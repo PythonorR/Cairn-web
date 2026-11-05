@@ -1,0 +1,12 @@
+# Cloudflare Worker that lets the Planner website call Claude without exposing the API key.
+# Deploy:  npx wrangler login  →  npx wrangler secret put ANTHROPIC_API_KEY  →  npx wrangler deploy
+name = "planner-ai"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+FIREBASE_PROJECT_ID = "planner-web-5bc9e"
+# Sites allowed to call this proxy (comma-separated).
+ALLOWED_ORIGINS = "https://planner-web-5bc9e.web.app,https://planner-web-5bc9e.firebaseapp.com"
+# Firebase "User UID"s allowed to use AI (comma-separated). Firebase console → Authentication → Users.
+ALLOWED_UIDS = ""

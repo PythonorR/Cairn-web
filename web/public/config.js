@@ -15,7 +15,7 @@ export const AI_EMAILS = ["*"];
 
 // App Check: proves AI requests come from this website, so nobody can use the AI quota from elsewhere.
 // reCAPTCHA v3 site key (google.com/recaptcha/admin). Leave "" to turn App Check off.
-export const RECAPTCHA_SITE_KEY = "";
+export const RECAPTCHA_SITE_KEY = "6LeQ_hMuAAAAALJY1Ac0Kl-xh6xZ2U51dk6gdC1S";
 
 // Gemini models for "Plan with AI", tried in order until one works (the one that worked is remembered).
 // Current model names: Firebase console → AI Logic → Prompt templates → new template → "model:" line.

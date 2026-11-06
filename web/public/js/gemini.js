@@ -35,18 +35,31 @@ Read the materials and judge how demanding each part is: how dense it is, how ma
 
 Write task titles and the summary in the language named in the request. Keep titles under 70 characters. The summary is one or two sentences on how you divided the work.`;
 
-/** files: [{ mimeType, data (base64) }], text: the request. Returns { summary, tasks }. */
-export async function planWithGemini(fb, app, { model, files, text }) {
+/** A "this model doesn't exist / isn't available" error, so the next model can be tried. */
+const modelMissing = (e) => /not found|404|is not supported|unsupported model|no longer available|deprecated/i.test(String(e?.message || e));
+
+/** files: [{ mimeType, data (base64) }], text: the request. Tries each model in turn. Returns { summary, tasks }. */
+export async function planWithGemini(fb, app, { models, files, text }) {
   const ai = fb.getAI(app, { backend: new fb.GoogleAIBackend() });
-  const gemini = fb.getGenerativeModel(ai, {
-    model,
-    systemInstruction: SYSTEM,
-    generationConfig: { responseMimeType: "application/json", responseJsonSchema: PLAN_SCHEMA },
-  });
   const parts = [
     ...files.map((f) => ({ type: "inlineData", inlineData: { mimeType: f.mimeType, data: f.data } })),
     { type: "text", text },
   ];
-  const result = await gemini.generateContent({ contents: [{ role: "user", parts }] });
-  return JSON.parse(result.response.text());
+  let lastError;
+  for (const model of models) {
+    try {
+      const gemini = fb.getGenerativeModel(ai, {
+        model,
+        systemInstruction: SYSTEM,
+        generationConfig: { responseMimeType: "application/json", responseJsonSchema: PLAN_SCHEMA },
+      });
+      const result = await gemini.generateContent({ contents: [{ role: "user", parts }] });
+      return JSON.parse(result.response.text());
+    } catch (e) {
+      lastError = e;
+      if (!modelMissing(e)) throw e;
+      console.warn(`Gemini model ${model} unavailable, trying the next one`, e);
+    }
+  }
+  throw lastError;
 }

@@ -62,7 +62,7 @@ node --test web/tests/sync.test.mjs
 플래너 화면 위쪽 ✦ 버튼으로 써요. 강의 자료나 교과서 PDF·사진을 올리면 Gemini가 난이도를 보고 날짜별로 나눠 줘요.
 - Firebase **AI Logic**의 Gemini Developer API(무료 등급)를 써요. 따로 서버나 API 키가 필요 없어요.
 - 켜는 법: Firebase 콘솔 → 왼쪽 메뉴 **AI Logic** → **시작하기** → **Gemini Developer API** 선택.
-- 쓰는 모델은 `public/config.js`의 `GEMINI_MODEL`이에요 (기본 `gemini-2.5-flash`). 콘솔에서 쓸 수 있는 모델로 바꿀 수 있어요.
+- 쓰는 모델은 `public/config.js`의 `GEMINI_MODELS` 목록이에요. 앞에서부터 시도하고, 없는 모델이면 다음 것으로 넘어가요 (첫 번째는 항상 최신 Flash를 가리키는 `gemini-flash-latest`).
 - 버튼이 보이는 계정은 `config.js`의 `AI_EMAILS`예요. 친구도 쓰게 하려면 이메일을 추가하세요.
 - 무료 등급은 하루 사용량 한도가 있고, 보낸 자료가 Google 서비스 개선에 쓰일 수 있어요.
 

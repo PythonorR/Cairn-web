@@ -12,5 +12,6 @@ export const FIREBASE_CONFIG = {
 // Accounts that see the "Plan with AI" button. Add friends' emails here to let them use it too.
 export const AI_EMAILS = ["jimin5kr@gmail.com"];
 
-// Gemini model used by "Plan with AI" (Firebase console → AI Logic shows the models you can use).
-export const GEMINI_MODEL = "gemini-2.5-flash";
+// Gemini models for "Plan with AI", tried in order: if one doesn't exist (anymore), the next is used.
+// "gemini-flash-latest" always points to Google's newest Flash model.
+export const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"];

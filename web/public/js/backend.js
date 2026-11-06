@@ -1,7 +1,7 @@
 // Accounts and storage. Firebase when config.js is filled in; otherwise a local demo
 // backend (this browser only) so the site can be previewed before Firebase is set up.
 
-import { FIREBASE_CONFIG, GEMINI_MODEL } from "../config.js";
+import { FIREBASE_CONFIG, GEMINI_MODELS } from "../config.js";
 import { t } from "./i18n.js";
 
 export const isConfigured = !!(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey);
@@ -52,7 +52,7 @@ async function firebaseBackend(config) {
     /** Plan with AI (Gemini through Firebase AI Logic). */
     aiPlan: async (input) => {
       const { planWithGemini } = await import("./gemini.js");
-      return planWithGemini(fb, app, { model: GEMINI_MODEL, ...input });
+      return planWithGemini(fb, app, { models: GEMINI_MODELS, ...input });
     },
     /** Deletes all of the user's planners and habits, then the account itself. */
     deleteAccount: async (u) => {

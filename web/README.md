@@ -58,12 +58,13 @@ node --test web/tests/logic.test.mjs
 node --test web/tests/sync.test.mjs
 ```
 
-## AI로 계획 짜기 (선택)
-플래너 화면 위쪽 ✦ 버튼으로 써요. 강의 자료나 교과서 PDF를 올리면 Claude가 난이도를 보고 날짜별로 나눠 줘요.
-
-이 기능은 `config.js`의 `AI_EMAILS`에 있는 계정에만 보여요.
-
-켜는 방법은 `../ai-proxy/README.md`를 보세요. 설정이 끝나면 `config.js`의 `AI_PROXY_URL`에 주소를 넣으면 돼요.
+## AI로 계획 짜기 (Gemini)
+플래너 화면 위쪽 ✦ 버튼으로 써요. 강의 자료나 교과서 PDF·사진을 올리면 Gemini가 난이도를 보고 날짜별로 나눠 줘요.
+- Firebase **AI Logic**의 Gemini Developer API(무료 등급)를 써요. 따로 서버나 API 키가 필요 없어요.
+- 켜는 법: Firebase 콘솔 → 왼쪽 메뉴 **AI Logic** → **시작하기** → **Gemini Developer API** 선택.
+- 쓰는 모델은 `public/config.js`의 `GEMINI_MODEL`이에요 (기본 `gemini-2.5-flash`). 콘솔에서 쓸 수 있는 모델로 바꿀 수 있어요.
+- 버튼이 보이는 계정은 `config.js`의 `AI_EMAILS`예요. 친구도 쓰게 하려면 이메일을 추가하세요.
+- 무료 등급은 하루 사용량 한도가 있고, 보낸 자료가 Google 서비스 개선에 쓰일 수 있어요.
 
 ## 앱과 다른 점
 - **알림 없음:** 8시 알림은 서버가 필요해서 웹에는 넣지 않았어요. 빨간 마감 바는 똑같이 보여요.

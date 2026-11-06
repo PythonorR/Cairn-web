@@ -5,14 +5,14 @@
 // - Rollover (moving unfinished tasks to today) is shown right away but only SAVED once the
 //   server's latest copy has arrived, and it never bumps `updatedAt`.
 // - When the server sends a newer copy than one we were about to save, the server copy wins.
-import { rollover, todayKey, uid } from "./logic.js";
+import { addDays, rollover, todayKey, uid } from "./logic.js";
 import { t } from "./i18n.js";
 
 const SAVE_DELAY = 400; // ms; batches fast typing into one write
 const COLLECTIONS = ["planners", "habits"];
 
 export function createStore(backend, userId) {
-  let state = { planners: [], habits: [], today: todayKey(), loaded: false, error: null };
+  let state = { planners: [], habits: [], today: todayKey(), loaded: false, error: null, toast: null };
   const listeners = new Set();
   const pending = { planners: new Map(), habits: new Map() }; // id -> timer (changes not yet written)
   const loaded = { planners: false, habits: false };
@@ -21,6 +21,15 @@ export function createStore(backend, userId) {
   const emit = () => listeners.forEach((fn) => fn(state));
   const set = (patch) => { state = { ...state, ...patch }; emit(); };
   const byCreated = (list) => [...list].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+  // "Deleted · Undo" style message; disappears after a few seconds.
+  let toastTimer;
+  function toast(text, undo) {
+    clearTimeout(toastTimer);
+    const id = uid();
+    set({ toast: { id, text, undo } });
+    toastTimer = setTimeout(() => { if (state.toast?.id === id) set({ toast: null }); }, 5500);
+  }
 
   // ---------- writing ----------
   function write(name, d) {
@@ -162,7 +171,37 @@ export function createStore(backend, userId) {
     },
     add(id, items) { mutate(id, (p) => { p.items.push(...items); }); },
     save(id, item) { mutate(id, (p) => { const i = find(p, item.id); if (i >= 0) p.items[i] = item; }); },
-    remove(id, itemId) { mutate(id, (p) => { p.items = p.items.filter((i) => i.id !== itemId); }); },
+    remove(id, itemId) {
+      const p = state.planners.find((x) => x.id === id);
+      const index = p ? p.items.findIndex((i) => i.id === itemId) : -1;
+      if (index < 0) return;
+      const removed = p.items[index];
+      mutate(id, (q) => { q.items = q.items.filter((i) => i.id !== itemId); });
+      toast(t("deletedItem", { title: removed.title }), () =>
+        mutate(id, (q) => { if (!q.items.some((i) => i.id === itemId)) q.items.splice(Math.min(index, q.items.length), 0, removed); }));
+    },
+    /** Move a task (or deadline) to the next day. */
+    postpone(id, itemId) {
+      const p = state.planners.find((x) => x.id === id);
+      const item = p?.items.find((i) => i.id === itemId);
+      if (!item || item.kind === "event") return;
+      const before = { date: item.date, rolledFrom: item.rolledFrom ?? null };
+      mutate(id, (q) => { const it = q.items.find((i) => i.id === itemId); it.date = addDays(it.date, 1); it.rolledFrom = null; });
+      toast(t("postponed", { title: item.title }), () =>
+        mutate(id, (q) => { const it = q.items.find((i) => i.id === itemId); if (it) Object.assign(it, before); }));
+    },
+    /** Reorder: put itemId just before (or after) targetId. */
+    moveItem(id, itemId, targetId, after = false) {
+      if (itemId === targetId) return;
+      mutate(id, (q) => {
+        const from = q.items.findIndex((i) => i.id === itemId);
+        if (from < 0) return;
+        const [it] = q.items.splice(from, 1);
+        const to = q.items.findIndex((i) => i.id === targetId);
+        if (to < 0) { q.items.splice(from, 0, it); return; }
+        q.items.splice(after ? to + 1 : to, 0, it);
+      });
+    },
     toggle(id, itemId) {
       mutate(id, (p) => {
         const i = find(p, itemId);
@@ -179,10 +218,34 @@ export function createStore(backend, userId) {
       return p.id;
     },
     deletePlanner(id) {
+      const removed = state.planners.find((p) => p.id === id);
       clearTimeout(pending.planners.get(id));
       pending.planners.delete(id);
       set({ planners: state.planners.filter((p) => p.id !== id) });
       backend.remove(userId, "planners", id).catch((e) => console.error(e));
+      if (removed) toast(t("deletedItem", { title: removed.name || t("untitled") }), () => api.restorePlanner(removed));
+    },
+    /** Put a planner back exactly as it was (undo, or restoring a backup). */
+    restorePlanner(p) {
+      const copy = { ...structuredClone(p), updatedAt: Date.now() };
+      set({ planners: byCreated([...state.planners.filter((x) => x.id !== p.id), copy]) });
+      write("planners", copy);
+    },
+    restoreHabit(h) {
+      const copy = { ...structuredClone(h), updatedAt: Date.now() };
+      set({ habits: byCreated([...state.habits.filter((x) => x.id !== h.id), copy]) });
+      write("habits", copy);
+    },
+    /** Everything, for the backup file. */
+    exportData: () => ({ app: "Cairn", version: 1, exportedAt: new Date().toISOString(), planners: state.planners, habits: state.habits }),
+    /** Restore a backup: replaces planners/habits with the same id, adds the rest. */
+    importData(data) {
+      const planners = Array.isArray(data?.planners) ? data.planners.filter((p) => p && p.id && Array.isArray(p.items)) : [];
+      const habits = Array.isArray(data?.habits) ? data.habits.filter((h) => h && h.id) : [];
+      planners.forEach((p) => api.restorePlanner(p));
+      habits.forEach((h) => api.restoreHabit(h));
+      flush();
+      return { planners: planners.length, habits: habits.length };
     },
 
     addHabit(name) {
@@ -200,15 +263,19 @@ export function createStore(backend, userId) {
       });
     },
     deleteHabit(id) {
+      const removed = state.habits.find((h) => h.id === id);
+      if (removed) setTimeout(() => toast(t("deletedItem", { title: removed.name }), () => api.restoreHabit(removed)));
       clearTimeout(pending.habits.get(id));
       pending.habits.delete(id);
       set({ habits: state.habits.filter((h) => h.id !== id) });
       backend.remove(userId, "habits", id).catch((e) => console.error(e));
     },
 
-    /** Firebase sign-in token for the AI proxy. */
-    idToken: () => backend.idToken(),
+    /** Plan with AI (Gemini). */
+    aiPlan: (input) => backend.aiPlan(input),
+    deleteAccount: () => backend.deleteAccount(userId),
     clearError() { set({ error: null }); },
+    clearToast() { clearTimeout(toastTimer); set({ toast: null }); },
   };
   return api;
 }

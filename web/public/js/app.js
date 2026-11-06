@@ -56,17 +56,22 @@ function SignedIn({ backend, user, route }) {
 
   if (!state.loaded) return html`<p class="splash" aria-busy="true">Cairn</p>`;
 
+  const undoToast = state.toast && html`<div class="undo-toast" role="status" key=${state.toast.id}>
+    <span class="grow">${state.toast.text}</span>
+    ${state.toast.undo && html`<button class="undo-btn" onClick=${() => { state.toast.undo(); store.clearToast(); }}>${t("undo")}</button>`}
+  </div>`;
+
   const error = state.error &&
     html`<p class="toast" role="alert" onClick=${() => store.clearError()}>${state.error}</p>`;
 
-  if (route.name === "guide") return html`${error}<${Guide}/>`;
+  if (route.name === "guide") return html`${error}${undoToast}<${Guide}/>`;
 
   const planner = route.name === "p" ? store.planner(route.id) : null;
   if (planner) {
-    return html`${error}<${PlannerScreen} key=${planner.id} store=${store} state=${state} planner=${planner} canUseAI=${canUseAI(user)}
+    return html`${error}${undoToast}<${PlannerScreen} key=${planner.id} store=${store} state=${state} planner=${planner} canUseAI=${canUseAI(user)}
       onDeleted=${() => { go("/"); store.deletePlanner(planner.id); }}/>`;
   }
-  return html`${error}<${PlannerList} store=${store} state=${state} user=${user} backend=${backend}/>`;
+  return html`${error}${undoToast}<${PlannerList} store=${store} state=${state} user=${user} backend=${backend}/>`;
 }
 
 applyTheme(getTheme());

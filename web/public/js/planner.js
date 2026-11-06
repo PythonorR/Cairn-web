@@ -38,6 +38,8 @@ export function PlannerScreen({ store, state, planner, canUseAI, onDeleted }) {
     onEdit: (item) => setEditor({ item, isNew: false }),
     onToggle: (itemId) => { haptic(); store.toggle(id, itemId); },
     onDelete: (itemId) => store.remove(id, itemId),
+    onPostpone: (itemId) => store.postpone(id, itemId),
+    onMove: (itemId, targetId, after) => store.moveItem(id, itemId, targetId, after),
   };
 
   return html`<div class="screen">
@@ -157,13 +159,14 @@ function DayTab({ planner, onNewSubject, sel, setSel, today, first, actions }) {
 }
 
 /** A day's plan grouped by subject; used by Day, and inline in Week and Month. */
-function DayList({ planner, day, empty, onEdit, onToggle, onDelete }) {
+function DayList({ planner, day, empty, onEdit, onToggle, onDelete, onPostpone, onMove }) {
   const gs = groups(planner, day);
   if (!gs.length) return html`<p class="pad muted empty-day">${empty}</p>`;
   return gs.map((g) => html`<section class="pad group" key=${g.key}>
     <h3 class="label" style=${`color:${g.kind === "due" ? "var(--due)" : g.kind === "none" ? "var(--muted)" : colorVar(g.color)}`}>${g.title}</h3>
     ${g.items.map((it) => html`<${ItemRow} key=${it.id} item=${it} subject=${subjectOf(planner, it.subjectId)}
-        onToggle=${() => onToggle(it.id)} onEdit=${() => onEdit(it)} onDelete=${() => onDelete(it.id)}/>`)}
+        onToggle=${() => onToggle(it.id)} onEdit=${() => onEdit(it)} onDelete=${() => onDelete(it.id)}
+        onPostpone=${() => onPostpone(it.id)} onMove=${(target, after) => onMove(it.id, target, after)}/>`)}
   </section>`);
 }
 
@@ -259,10 +262,20 @@ function Ribbon({ planner, sel, setSel, today, first }) {
   </div>`;
 }
 
-function ItemRow({ item, subject, onToggle, onEdit, onDelete }) {
+/**
+ * One task / due / event row.
+ * Tap = edit · long-press or right-click = menu (Tomorrow, Delete) · swipe left = move to tomorrow ·
+ * drag the ⋮⋮ handle = reorder within its subject.
+ */
+function ItemRow({ item, subject, onToggle, onEdit, onDelete, onPostpone, onMove }) {
   const [menu, setMenu] = useState(false);
+  const [swipe, setSwipe] = useState(0);   // px, ≤ 0 while swiping left
+  const [lift, setLift] = useState(0);     // px, while dragging to reorder
+  const rowRef = useRef(null);
   const press = useRef(null);
-  const long = useRef(false);
+  const suppressClick = useRef(false);
+  const reorder = useRef(null);
+  const canPostpone = item.kind !== "event";
   const tint = item.kind === "due" ? "var(--due)" : colorVar(subject?.color);
 
   let detail = null;
@@ -274,37 +287,86 @@ function ItemRow({ item, subject, onToggle, onEdit, onDelete }) {
   const a11y = [item.title, subject?.name, detail?.text.replace("↩ ", ""),
     item.kind === "event" ? t("event") : item.done ? t("isDone") : t("notDone")].filter(Boolean).join(", ");
 
-  const startPress = (e) => {
-    long.current = false;
-    const x = e.clientX, y = e.clientY;
-    press.current = { x, y, timer: setTimeout(() => { long.current = true; haptic(); setMenu(true); }, 550) };
+  // --- press, long-press and swipe on the row ---
+  const down = (e) => {
+    suppressClick.current = false;
+    press.current = { x: e.clientX, y: e.clientY, h: null, id: e.pointerId,
+      timer: setTimeout(() => { if (press.current && !press.current.h) { suppressClick.current = true; haptic(); setMenu(true); } }, 550) };
   };
-  const cancelPress = (e) => {
+  const move = (e) => {
     const p = press.current;
     if (!p) return;
-    if (e && e.type === "pointermove" && Math.hypot(e.clientX - p.x, e.clientY - p.y) < 10) return;
-    clearTimeout(p.timer);
+    if (e.pointerType === "mouse" && e.buttons === 0) { end(); return; }
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    if (p.h === null && Math.hypot(dx, dy) > 8) {
+      clearTimeout(p.timer);
+      p.h = canPostpone && Math.abs(dx) > Math.abs(dy) && dx < 0;
+      if (p.h) { try { e.currentTarget.setPointerCapture(e.pointerId); } catch {} }
+      else { press.current = null; return; }
+    }
+    if (p.h) setSwipe(Math.max(-150, Math.min(0, dx)));
+  };
+  const end = () => {
+    const p = press.current;
     press.current = null;
+    if (!p) return;
+    clearTimeout(p.timer);
+    if (p.h) {
+      suppressClick.current = true;
+      if (swipe < -80) { haptic(); setSwipe(-400); setTimeout(() => { setSwipe(0); onPostpone(); }, 180); }
+      else setSwipe(0);
+    }
   };
 
-  return html`<div class="row">
-    ${item.kind === "event"
-      ? html`<span class="row-lead"><${Diamond} size=${12} kind="event"/></span>`
-      : html`<button class="check" style=${`--c:${tint}`} aria-label=${t(item.done ? "markNotDone" : "markDone", { title: item.title })}
-            aria-pressed=${!!item.done} onClick=${onToggle}>
-          <span class=${`circle${item.done ? " on" : ""}`}>${item.done && html`<${Icon.check}/>`}</span>
-        </button>`}
-    <div class="row-main" role="button" tabindex="0" aria-label=${a11y}
-         onClick=${() => { if (long.current) { long.current = false; return; } onEdit(); }}
-         onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onEdit(); } if (e.key === "Delete") onDelete(); }}
-         onContextMenu=${(e) => { e.preventDefault(); setMenu(true); }}
-         onPointerDown=${startPress} onPointerUp=${cancelPress} onPointerLeave=${cancelPress} onPointerMove=${cancelPress}>
-      <span class=${`row-title${item.done ? " done" : ""}`}>${item.title}</span>
-      ${detail && html`<span class="row-detail" style=${`color:${detail.color}`}>${detail.text}</span>`}
+  // --- drag the handle to reorder within the same group ---
+  const gripDown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+    reorder.current = { y: e.clientY };
+  };
+  const gripMove = (e) => {
+    const r = reorder.current;
+    if (!r) return;
+    if (e.pointerType === "mouse" && e.buttons === 0) { gripUp(); return; }
+    let dy = e.clientY - r.y;
+    const el = rowRef.current;
+    const rows = [...(el?.closest(".group")?.querySelectorAll(":scope > .row[data-id]") || [])];
+    const i = rows.indexOf(el);
+    const next = rows[i + 1], prev = rows[i - 1];
+    if (next && dy > next.offsetHeight / 2) { onMove(next.dataset.id, true); r.y += next.offsetHeight; dy -= next.offsetHeight; }
+    else if (prev && dy < -prev.offsetHeight / 2) { onMove(prev.dataset.id, false); r.y -= prev.offsetHeight; dy += prev.offsetHeight; }
+    setLift(dy);
+  };
+  const gripUp = () => { reorder.current = null; setLift(0); };
+
+  return html`<div ref=${rowRef} class=${`row${lift ? " lifted" : ""}${swipe ? " swiping" : ""}`} data-id=${item.id}
+      style=${lift ? `transform:translateY(${lift}px)` : ""}>
+    ${canPostpone && html`<div class="row-swipe-bg" aria-hidden="true" style=${`opacity:${Math.min(1, -swipe / 80)}`}>
+      ${t("tomorrow")} <${Icon.right}/></div>`}
+    <div class="row-fg" style=${swipe ? `transform:translateX(${swipe}px)` : ""}
+        onPointerDown=${down} onPointerMove=${move} onPointerUp=${end} onPointerCancel=${() => { press.current = null; setSwipe(0); }}>
+      ${item.kind === "event"
+        ? html`<span class="row-lead"><${Diamond} size=${12} kind="event"/></span>`
+        : html`<button class="check" style=${`--c:${tint}`} aria-label=${t(item.done ? "markNotDone" : "markDone", { title: item.title })}
+              aria-pressed=${!!item.done} onClick=${(e) => { if (suppressClick.current) { suppressClick.current = false; return; } onToggle(); }}>
+            <span class=${`circle${item.done ? " on" : ""}`}>${item.done && html`<${Icon.check}/>`}</span>
+          </button>`}
+      <div class="row-main" role="button" tabindex="0" aria-label=${a11y}
+           onClick=${() => { if (suppressClick.current) { suppressClick.current = false; return; } onEdit(); }}
+           onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onEdit(); } if (e.key === "Delete") onDelete(); }}
+           onContextMenu=${(e) => { e.preventDefault(); setMenu(true); }}>
+        <span class=${`row-title${item.done ? " done" : ""}`}>${item.title}</span>
+        ${detail && html`<span class="row-detail" style=${`color:${detail.color}`}>${detail.text}</span>`}
+      </div>
+      <span class="grip" aria-hidden="true" title=${t("dragToReorder")}
+            onPointerDown=${gripDown} onPointerMove=${gripMove} onPointerUp=${gripUp} onPointerCancel=${gripUp}>
+        <${Icon.grip}/></span>
     </div>
     ${menu && html`
       <div class="scrim" onClick=${() => setMenu(false)}></div>
       <div class="popover row-menu" role="menu">
+        ${canPostpone && html`<button role="menuitem" class="popover-item" onClick=${() => { setMenu(false); onPostpone(); }}>${t("moveToTomorrow")}</button>`}
         <button role="menuitem" class="popover-item danger" onClick=${() => { setMenu(false); onDelete(); }}>${t("delete")}</button>
       </div>`}
   </div>`;

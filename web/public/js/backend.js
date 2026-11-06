@@ -1,7 +1,7 @@
 // Accounts and storage. Firebase when config.js is filled in; otherwise a local demo
 // backend (this browser only) so the site can be previewed before Firebase is set up.
 
-import { FIREBASE_CONFIG } from "../config.js";
+import { FIREBASE_CONFIG, GEMINI_MODEL } from "../config.js";
 import { t } from "./i18n.js";
 
 export const isConfigured = !!(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey);
@@ -49,8 +49,30 @@ async function firebaseBackend(config) {
       fb.onSnapshot(col(u, name), (snap) => cb(snap.docs.map((d) => d.data()), { fromCache: snap.metadata.fromCache }), onError),
     save: (u, name, d) => fb.setDoc(docRef(u, name, d.id), d),
     remove: (u, name, id) => fb.deleteDoc(docRef(u, name, id)),
+    /** Plan with AI (Gemini through Firebase AI Logic). */
+    aiPlan: async (input) => {
+      const { planWithGemini } = await import("./gemini.js");
+      return planWithGemini(fb, app, { model: GEMINI_MODEL, ...input });
+    },
+    /** Deletes all of the user's planners and habits, then the account itself. */
+    deleteAccount: async (u) => {
+      const user = auth.currentUser;
+      if (!user) throw { code: "auth/requires-recent-login" };
+      // Firebase only deletes accounts that signed in within the last few minutes:
+      // check first, so data is never removed while the account stays.
+      const last = Date.parse(user.metadata?.lastSignInTime || "");
+      if (!last || Date.now() - last > 4.5 * 60 * 1000) throw { code: "auth/requires-recent-login" };
+      for (const name of ["planners", "habits"]) {
+        const snap = await fb.getDocs(col(u, name));
+        await Promise.all(snap.docs.map((d) => fb.deleteDoc(d.ref)));
+      }
+      await fb.deleteUser(user);
+    },
   };
 }
+
+const nextDay = (k) => { const [y, m, d] = k.split("-").map(Number); const x = new Date(y, m - 1, d + 1);
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
 
 function demoBackend() {
   const KEY = "planner.demo.v1";
@@ -87,6 +109,16 @@ function demoBackend() {
     },
     save: async (_u, name, d) => { state[name] = { ...(state[name] || {}), [d.id]: d }; write(state); },
     remove: async (_u, name, id) => { const { [id]: _, ...rest } = state[name] || {}; state[name] = rest; write(state); },
+    // Preview mode: a pretend plan so the screen can be tried without Firebase.
+    aiPlan: async ({ start, finish }) => {
+      await new Promise((r) => setTimeout(r, 600));
+      const tasks = [];
+      for (let d = start, i = 0; d <= finish && i < 4; d = nextDay(d), i++) {
+        tasks.push({ date: d, title: `Preview task ${i + 1}`, minutes: 45, difficulty: ["easy", "medium", "hard", "medium"][i] });
+      }
+      return { summary: "Preview mode: this is a sample plan.", tasks };
+    },
+    deleteAccount: async () => { try { localStorage.removeItem(KEY); } catch {} setUser(null); },
   };
 }
 

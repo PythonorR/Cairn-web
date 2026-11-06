@@ -9,9 +9,8 @@ export const FIREBASE_CONFIG = {
   appId: "1:323757685443:web:4cee4e5f5157ac9584c076",
 };
 
-// Accounts that see the "Plan with AI" button. (The AI proxy separately allows only listed user IDs.)
+// Accounts that see the "Plan with AI" button. Add friends' emails here to let them use it too.
 export const AI_EMAILS = ["jimin5kr@gmail.com"];
 
-// Address of your AI proxy (Cloudflare Worker in /ai-proxy), e.g. "https://planner-ai.yourname.workers.dev".
-// Empty = the "Plan with AI" button explains that AI isn't set up yet.
-export const AI_PROXY_URL = "";
+// Gemini model used by "Plan with AI" (Firebase console → AI Logic shows the models you can use).
+export const GEMINI_MODEL = "gemini-2.5-flash";

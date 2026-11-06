@@ -16,6 +16,40 @@ export function PlannerList({ store, state, user, backend }) {
   const [showNew, setShowNew] = useState(false);
   const [menu, setMenu] = useState(false);
   const [theme, setThemeState] = useState(getTheme());
+  const [showPast, setShowPast] = useState(false);
+  const [notice, setNotice] = useState("");
+  const active = state.planners.filter((p) => p.end >= state.today);
+  const past = state.planners.filter((p) => p.end < state.today).sort((a, b) => b.end.localeCompare(a.end));
+
+  const downloadBackup = () => {
+    const blob = new Blob([JSON.stringify(store.exportData(), null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `cairn-backup-${state.today}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    setMenu(false);
+  };
+  const restoreBackup = async (file) => {
+    setMenu(false);
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      const n = { p: (data.planners || []).length, h: (data.habits || []).length };
+      if (!confirm(t("restoreConfirm", { p: n.p, h: n.h }))) return;
+      const done = store.importData(data);
+      setNotice(t("restored", { p: done.planners, h: done.habits }));
+    } catch { setNotice(t("restoreFailed")); }
+  };
+  const deleteAccount = async () => {
+    setMenu(false);
+    if (!confirm(t("deleteAccountConfirm"))) return;
+    try { await store.deleteAccount(); }
+    catch (e) {
+      if (e?.code === "auth/requires-recent-login") { alert(t("deleteAccountReauth")); backend.signOut(); }
+      else setNotice(t("authUnknown"));
+    }
+  };
   // Always the email's first letter, so it never changes between sign-ins.
   const initial = (user.email || user.name || "?").trim().charAt(0).toUpperCase();
 
@@ -42,21 +76,38 @@ export function PlannerList({ store, state, user, backend }) {
               <${Segmented} label=${t("language")} value=${lang} onChange=${(l) => l !== lang && setLang(l)}
                   options=${[["en", "English"], ["ko", "한국어"]]}/>
             </div>
+            <div class="popover-sep"></div>
+            <button role="menuitem" class="popover-item" onClick=${downloadBackup}>${t("downloadBackup")}</button>
+            <label role="menuitem" class="popover-item file-item">${t("restoreBackup")}
+              <input type="file" accept="application/json,.json" onChange=${(e) => restoreBackup(e.target.files[0])}/></label>
+            <div class="popover-sep"></div>
             <button role="menuitem" class="popover-item" onClick=${() => { setMenu(false); backend.signOut(); }}>${t("signOut")}</button>
+            <button role="menuitem" class="popover-item danger small-item" onClick=${deleteAccount}>${t("deleteAccount")}</button>
           </div>`}
       </header>
 
       <${HabitsOverview} store=${store} habits=${state.habits} today=${state.today}/>
 
-      ${state.planners.length === 0
+      ${notice && html`<p class="notice-line" role="status" onClick=${() => setNotice("")}>${notice}</p>`}
+
+      ${active.length === 0
         ? html`<section class="empty-state">
-            <h2>${t("noPlanners")}</h2>
+            <h2>${past.length ? t("noActivePlanners") : t("noPlanners")}</h2>
             <p class="muted">${t("noPlannersHelp")}</p>
-            <a class="guide-cta" href="#/guide">${t("newHere")} <${Icon.right}/></a>
+            ${!past.length && html`<a class="guide-cta" href="#/guide">${t("newHere")} <${Icon.right}/></a>`}
           </section>`
         : html`<ul class="planners">
-            ${state.planners.map((p) => html`<li key=${p.id}><${PlannerRow} planner=${p}/></li>`)}
+            ${active.map((p) => html`<li key=${p.id}><${PlannerRow} planner=${p}/></li>`)}
           </ul>`}
+
+      ${past.length > 0 && html`<section class="past-planners">
+        <button class="past-toggle" aria-expanded=${showPast} onClick=${() => setShowPast(!showPast)}>
+          <span>${t("pastPlanners", { n: past.length })}</span><span class="past-chev"><${Icon.right}/></span>
+        </button>
+        ${showPast && html`<ul class="planners past-list">
+          ${past.map((p) => html`<li key=${p.id}><${PlannerRow} planner=${p}/></li>`)}
+        </ul>`}
+      </section>`}
     </main>
 
     <footer class="bottom">

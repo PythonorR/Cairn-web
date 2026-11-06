@@ -130,7 +130,7 @@ const DemoHabit = () => html`<div class="guide-demo" aria-hidden="true">
   </div>
 </div>`;
 
-// 07 — a PDF goes in, Claude reads it, tasks spread over three days by difficulty
+// 07 — a PDF goes in, the AI reads it, tasks spread over three days by difficulty
 function DemoAI() {
   const days = [
     ["2026-11-04", [[L("Ch 4 reading", "4장 읽기"), "easy", 40], [L("4.3 proofs", "4.3 증명"), "hard", 70]]],
@@ -197,8 +197,8 @@ const SECTIONS = [
             "할 일이 과목 아래에 모여 있어서, 오늘 과목마다 무엇을 해야 하는지 한눈에 보여요. 과목은 아래 입력창의 점을 눌러 ‘＋ 새 과목’으로 바로 추가해요.") },
   { Demo: DemoRollover,
     title: L("Unfinished? It moves on by itself.", "못 끝냈다면? 저절로 다음 날로."),
-    text: L("Whatever you don't finish today is waiting for you tomorrow, marked with the day you first planned it. No button to press, nothing lost — and since the past takes care of itself, new tasks go on today or later.",
-            "오늘 못 끝낸 일은 자정이 지나면 내일 목록으로 넘어가요. 처음 계획한 날짜도 함께 표시돼요. 누를 버튼도, 잃어버리는 일도 없어요. 그래서 새 할 일은 오늘 이후에만 추가해요.") },
+    text: L("Whatever you don't finish today is waiting for you tomorrow, marked with the day you first planned it. No button to press, nothing lost — new tasks go on today or later. Need to push something on purpose? Swipe it left to move it to tomorrow.",
+            "오늘 못 끝낸 일은 자정이 지나면 내일 목록으로 넘어가요. 처음 계획한 날짜도 함께 표시돼요. 누를 버튼도, 잃어버리는 일도 없어요. 새 할 일은 오늘 이후에만 추가해요. 일부러 미루고 싶으면 할 일을 왼쪽으로 밀어 내일로 보내세요.") },
   { Demo: DemoDue,
     title: L("Deadlines stay separate", "마감은 따로"),
     text: L("“Quiz 1 review” is something you study, not a deadline. For a real deadline, tap ••• in the bar at the bottom and switch on “Has a deadline”. For something at a set time, like an exam, choose Event. A red bar shows up only the day before and on the day — then it gets out of your way.",
@@ -217,16 +217,16 @@ const SECTIONS = [
             "도서관 가기처럼 매일 하는 일은 계획의 일부가 아니라서 첫 화면에 있어요. 거기서 오늘 체크하고, 새 습관을 추가하고, 최근 14일 기록을 봐요. ‘12일째’는 지금까지 한 날의 합계, ‘연속 5일’은 지금 이어지고 있는 날 수예요.") },
   { Demo: DemoAI,
     title: L("Let AI spread the work", "AI가 알맞게 나눠 줘요"),
-    text: L("Tap ✦ at the top of a planner and add lecture slides or textbook chapters. Claude reads them, judges which parts are hard, and spreads study tasks across your days within your daily time.",
-            "플래너 위쪽의 ✦를 누르고 강의 자료나 교과서 챕터를 올리세요. Claude가 읽고 어려운 부분을 판단해서, 하루 공부 시간 안에서 날짜별로 할 일을 나눠 줘요.") },
+    text: L("Tap ✦ at the top of a planner and add lecture slides or textbook chapters. The AI (Gemini) reads them, judges which parts are hard, and spreads study tasks across your days within your daily time.",
+            "플래너 위쪽의 ✦를 누르고 강의 자료나 교과서 챕터를 올리세요. AI(Gemini)가 읽고 어려운 부분을 판단해서, 하루 공부 시간 안에서 날짜별로 할 일을 나눠 줘요.") },
   { Demo: DemoProgress,
     title: L("See the bigger picture", "큰 그림 보기"),
     text: L("Week shows every day in one list — tap a day to open it right there. Month is a calendar; tap a date to see and edit its plan below. Progress shows how far along you are, subject by subject.",
             "주간은 일주일을 한 목록으로 보여 주고, 날짜를 누르면 그 자리에서 펼쳐져요. 월간은 달력이고, 날짜를 누르면 아래에서 그날 계획을 보고 고칠 수 있어요. 진행률은 과목별로 얼마나 했는지 보여줘요.") },
   { Demo: DemoSync,
     title: L("Yours, on every device", "어느 기기에서든 내 것"),
-    text: L("Sign in on your phone or laptop and your planners follow you. Only you can see them. On iPhone, tap Share → Add to Home Screen to use it like an app. Tap your initial (top right) for language and light / dark mode.",
-            "휴대폰이든 노트북이든 로그인하면 내 플래너가 따라와요. 나만 볼 수 있어요. 아이폰에서는 공유 → 홈 화면에 추가를 누르면 앱처럼 쓸 수 있어요. 오른쪽 위 이니셜을 누르면 언어와 라이트/다크 모드를 바꿀 수 있어요.") },
+    text: L("Sign in on your phone or laptop and your planners follow you. Only you can see them. On iPhone, tap Share → Add to Home Screen to use it like an app. Tap your initial (top right) for language, light / dark mode, and backups.",
+            "휴대폰이든 노트북이든 로그인하면 내 플래너가 따라와요. 나만 볼 수 있어요. 아이폰에서는 공유 → 홈 화면에 추가를 누르면 앱처럼 쓸 수 있어요. 오른쪽 위 이니셜을 누르면 언어, 라이트/다크 모드, 백업을 다룰 수 있어요.") },
 ];
 
 // ---------- the tour: one page per section ----------

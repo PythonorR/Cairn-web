@@ -90,3 +90,46 @@ test("habits: toggle, stats, and newer server copy wins", async () => {
   assert.deepEqual(store.get().habits[0].days, [addDays(today, -1), today]);
   stop();
 });
+
+test("delete + undo, move to tomorrow, reorder, backup round trip", async () => {
+  const today = todayKey();
+  const saved = {};
+  const backend = {
+    watch(_u, name, cb) {
+      const p = { id: "p1", name: "P", start: today, end: today, subjects: [], createdAt: 1, updatedAt: 1,
+        items: [item("a", "A", { date: today }), item("b", "B", { date: today }), item("c", "C", { date: today })] };
+      setTimeout(() => cb(name === "planners" ? [p] : [], { fromCache: false }));
+      return () => {};
+    },
+    save: async (_u, name, d) => { saved[d.id] = structuredClone(d); },
+    remove: async () => {},
+  };
+  const store = createStore(backend, "u1");
+  const stop = store.start();
+  await wait(30);
+  const titles = () => store.planner("p1").items.map((i) => i.title).join("");
+
+  store.remove("p1", "b");
+  assert.equal(titles(), "AC");
+  assert.match(store.get().toast.text, /B/);
+  store.get().toast.undo();
+  assert.equal(titles(), "ABC", "undo puts it back in the same place");
+
+  store.postpone("p1", "a");
+  assert.equal(store.planner("p1").items.find((i) => i.id === "a").date, addDays(today, 1));
+  store.get().toast.undo();
+  assert.equal(store.planner("p1").items.find((i) => i.id === "a").date, today);
+
+  store.moveItem("p1", "c", "a");          // C before A
+  assert.equal(titles(), "CAB");
+  store.moveItem("p1", "c", "b", true);    // C after B
+  assert.equal(titles(), "ABC");
+
+  const backup = JSON.parse(JSON.stringify(store.exportData()));
+  store.deletePlanner("p1");
+  assert.equal(store.get().planners.length, 0);
+  const result = store.importData(backup);
+  assert.deepEqual(result, { planners: 1, habits: 0 });
+  assert.equal(titles(), "ABC");
+  stop();
+});

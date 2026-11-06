@@ -902,3 +902,4 @@ body { letter-spacing: -0.1px; font-feature-settings: "ss06", "tnum" 0; }
 .past-chev { display: grid; transition: transform 0.25s var(--ease); }
 .past-toggle[aria-expanded="true"] .past-chev { transform: rotate(90deg); }
 .past-list .planner-name { font-size: 1.375rem; color: var(--muted); }
+.error-detail { font-size: 0.75rem; color: var(--muted); margin-top: 6px; line-height: 1.4; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; }

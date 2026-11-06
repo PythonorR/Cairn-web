@@ -36,6 +36,7 @@ export function AIPlanner({ store, planner, today, defaultSubject, onClose, onAd
   const [daily, setDaily] = useState(120);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [detail, setDetail] = useState(""); // Google's own message, small, to help find the cause
   const [plan, setPlan] = useState(null); // { summary, tasks }
 
   const totalBytes = files.reduce((n, f) => n + f.size, 0);
@@ -55,6 +56,7 @@ export function AIPlanner({ store, planner, today, defaultSubject, onClose, onAd
 
   const makePlan = async () => {
     setError("");
+    setDetail("");
     if (!files.length && !scope.trim()) return setError(t("aiNeedsInput"));
     if (totalBytes > MAX_TOTAL_BYTES) return setError(t("aiTooBig"));
     setBusy(true);
@@ -89,6 +91,7 @@ export function AIPlanner({ store, planner, today, defaultSubject, onClose, onAd
     } catch (e) {
       console.error(e);
       setError(e?.refusal ? t("aiRefused") : aiError(e));
+      setDetail(String(e?.message || e || "").replace(/\s+/g, " ").slice(0, 400));
     }
     setBusy(false);
   };
@@ -159,6 +162,7 @@ export function AIPlanner({ store, planner, today, defaultSubject, onClose, onAd
       </select></label>
 
     ${error && html`<p class="error" role="alert">${error}</p>`}
+    ${detail && html`<p class="error-detail">${detail}</p>`}
     <button class="capsule ai-go" disabled=${busy} onClick=${makePlan} style=${subject ? `--c:${colorVar(subject.color)}` : ""}>
       ${busy ? html`<span class="spinner" aria-hidden="true"></span>` : html`<${Icon.sparkle}/>`}
       <span>${busy ? t("thinking") : t("makePlan")}</span>

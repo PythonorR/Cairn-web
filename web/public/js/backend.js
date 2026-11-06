@@ -1,7 +1,7 @@
 // Accounts and storage. Firebase when config.js is filled in; otherwise a local demo
 // backend (this browser only) so the site can be previewed before Firebase is set up.
 
-import { FIREBASE_CONFIG, GEMINI_MODELS } from "../config.js";
+import { FIREBASE_CONFIG, GEMINI_MODELS, RECAPTCHA_SITE_KEY } from "../config.js";
 import { t } from "./i18n.js";
 
 export const isConfigured = !!(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey);
@@ -18,6 +18,13 @@ export function authMessage(err) {
 async function firebaseBackend(config) {
   const fb = await import("../vendor/firebase.js");
   const app = fb.initializeApp(config);
+  if (RECAPTCHA_SITE_KEY) {
+    // On this computer (localhost) App Check prints a debug token to the console instead of using reCAPTCHA.
+    if (["localhost", "127.0.0.1"].includes(location.hostname)) self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+    try {
+      fb.initializeAppCheck(app, { provider: new fb.ReCaptchaV3Provider(RECAPTCHA_SITE_KEY), isTokenAutoRefreshEnabled: true });
+    } catch (e) { console.warn("App Check didn't start", e); }
+  }
   const auth = fb.getAuth(app);
   let db;
   try {

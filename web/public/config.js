@@ -9,8 +9,13 @@ export const FIREBASE_CONFIG = {
   appId: "1:323757685443:web:4cee4e5f5157ac9584c076",
 };
 
-// Accounts that see the "Plan with AI" button. Add friends' emails here to let them use it too.
-export const AI_EMAILS = ["jimin5kr@gmail.com"];
+// Accounts that see the "Plan with AI" button. "*" = everyone who is signed in.
+// To limit it again, list emails instead, e.g. ["jimin5kr@gmail.com", "friend@gmail.com"].
+export const AI_EMAILS = ["*"];
+
+// App Check: proves AI requests come from this website, so nobody can use the AI quota from elsewhere.
+// reCAPTCHA v3 site key (google.com/recaptcha/admin). Leave "" to turn App Check off.
+export const RECAPTCHA_SITE_KEY = "";
 
 // Gemini models for "Plan with AI", tried in order until one works (the one that worked is remembered).
 // Current model names: Firebase console → AI Logic → Prompt templates → new template → "model:" line.

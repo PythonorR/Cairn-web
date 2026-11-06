@@ -63,7 +63,12 @@ node --test web/tests/sync.test.mjs
 - Firebase **AI Logic**의 Gemini Developer API(무료 등급)를 써요. 따로 서버나 API 키가 필요 없어요.
 - 켜는 법: Firebase 콘솔 → 왼쪽 메뉴 **AI Logic** → **시작하기** → **Gemini Developer API** 선택.
 - 쓰는 모델은 `public/config.js`의 `GEMINI_MODELS` 목록이에요. 앞에서부터 시도하고, 없는 모델이면 다음 것으로 넘어가요 (첫 번째는 항상 최신 Flash를 가리키는 `gemini-flash-latest`).
-- 버튼이 보이는 계정은 `config.js`의 `AI_EMAILS`예요. 친구도 쓰게 하려면 이메일을 추가하세요.
+- 버튼이 보이는 계정은 `config.js`의 `AI_EMAILS`예요. `["*"]`이면 로그인한 모든 사람, 이메일 목록이면 그 사람들만 보여요.
+- **App Check (친구들에게 열 때 필수)**: 다른 곳에서 우리 AI 사용량을 몰래 쓰지 못하게 막아요.
+  1. https://www.google.com/recaptcha/admin 에서 새 사이트 등록 → 유형 **reCAPTCHA v3**(점수 기반), 도메인 `planner-web-5bc9e.web.app`, `planner-web-5bc9e.firebaseapp.com`.
+  2. 나오는 **사이트 키**를 `config.js`의 `RECAPTCHA_SITE_KEY`에 넣고 배포.
+  3. Firebase 콘솔 → App Check → 앱 탭 → 웹 앱 → reCAPTCHA → **비밀 키** 붙여넣기 → 저장.
+  4. App Check → API 탭 → Firebase AI Logic → 적용(Enforce).
 - 무료 등급은 하루 사용량 한도가 있고, 보낸 자료가 Google 서비스 개선에 쓰일 수 있어요.
 
 ## 앱과 다른 점

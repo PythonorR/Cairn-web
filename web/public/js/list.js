@@ -9,7 +9,7 @@ import { newSubject, SubjectsEditor } from "./subjects.js";
 import { AI_EMAILS } from "../config.js";
 
 /** Accounts that see "Plan with AI" (the AI proxy also checks the account itself). */
-export const canUseAI = (user) => AI_EMAILS.map((e) => e.toLowerCase()).includes((user.email || "").toLowerCase());
+export const canUseAI = (user) => AI_EMAILS.includes("*") || AI_EMAILS.map((e) => e.toLowerCase()).includes((user.email || "").toLowerCase());
 
 /** Root screen. Exactly one add control: the "New planner" capsule at the bottom. */
 export function PlannerList({ store, state, user, backend }) {

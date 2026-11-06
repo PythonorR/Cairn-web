@@ -22,6 +22,7 @@ const readBase64 = (file) => new Promise((resolve, reject) => {
 function aiError(e) {
   const code = String(e?.code || "");
   if (code.includes("api-not-enabled")) return t("aiNotSetUp");
+  if (/app check|appcheck/i.test(code + " " + (e?.message || ""))) return t("aiAppCheck");
   if (/quota|429|resource-exhausted/i.test(code + " " + (e?.message || ""))) return t("aiBusy");
   if (/too large|413|payload/i.test(e?.message || "")) return t("aiTooBig");
   if (/load failed|failed to fetch|network/i.test(e?.message || "")) return t("aiNetwork");

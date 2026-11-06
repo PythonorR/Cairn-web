@@ -108,7 +108,7 @@ const en = {
   thinking: "Reading your materials and planning… this can take a minute or two.",
   aiNeedsInput: "Add materials or describe what to cover.", aiTooBig: "These files are too large together (max 14 MB).",
   aiNotSetUp: "AI planning isn't turned on in Firebase yet (AI Logic).", aiNotAllowed: "AI planning isn't turned on for this account.",
-  aiFailed: "Couldn't make a plan. Please try again.", aiRefused: "The AI couldn't plan from these materials. Try different files or a shorter description.",
+  aiFailed: "Couldn't make a plan. Please try again.", aiNetwork: "The connection dropped. If the files are large, try one chapter at a time.", aiRefused: "The AI couldn't plan from these materials. Try different files or a shorter description.",
   aiPreview: "{n} tasks over {d} days", imageTooBig: "{name} is over 5 MB. Use a smaller image or a PDF.", badFile: "{name} isn't a PDF or image.", aiAuth: "Please sign in again.", aiBusy: "The AI is busy or today's free limit is used up. Try again later.", addTasks: "Add {n} tasks", tryAgain: "Try again",
   easy: "easy", medium: "medium", hard: "hard", hours: "{n} h", mins: "{n} min",
   // guide
@@ -200,7 +200,7 @@ const ko = {
   thinking: "자료를 읽고 계획을 짜고 있어요… 1~2분 걸릴 수 있어요.",
   aiNeedsInput: "자료를 올리거나 공부할 범위를 적어 주세요.", aiTooBig: "파일이 합쳐서 너무 커요 (최대 14MB).",
   aiNotSetUp: "Firebase에서 AI 기능(AI Logic)이 아직 켜져 있지 않아요.", aiNotAllowed: "이 계정에는 AI 계획 기능이 켜져 있지 않아요.",
-  aiFailed: "계획을 만들지 못했어요. 다시 시도해 주세요.", aiRefused: "이 자료로는 계획을 만들 수 없었어요. 다른 파일이나 더 짧은 설명으로 해 보세요.",
+  aiFailed: "계획을 만들지 못했어요. 다시 시도해 주세요.", aiNetwork: "연결이 끊겼어요. 파일이 크다면 챕터를 나눠서 올려 보세요.", aiRefused: "이 자료로는 계획을 만들 수 없었어요. 다른 파일이나 더 짧은 설명으로 해 보세요.",
   aiPreview: "{d}일 동안 할 일 {n}개", imageTooBig: "{name}이(가) 5MB를 넘어요. 더 작은 이미지나 PDF를 써 주세요.", badFile: "{name}은(는) PDF나 이미지가 아니에요.", aiAuth: "다시 로그인해 주세요.", aiBusy: "AI가 바쁘거나 오늘 무료 사용량을 다 썼어요. 잠시 뒤에 다시 해 주세요.", addTasks: "할 일 {n}개 추가", tryAgain: "다시 만들기",
   easy: "쉬움", medium: "보통", hard: "어려움", hours: "{n}시간", mins: "{n}분",
   skip: "Skip", swipeHint: "옆으로 밀어서 넘겨 보세요", clickHint: "화면을 클릭해서 넘겨 보세요", takeTour: "앱 둘러보기",

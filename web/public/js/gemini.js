@@ -35,8 +35,13 @@ Read the materials and judge how demanding each part is: how dense it is, how ma
 
 Write task titles and the summary in the language named in the request. Keep titles under 70 characters. The summary is one or two sentences on how you divided the work.`;
 
-/** A "this model doesn't exist / isn't available" error, so the next model can be tried. */
-const modelMissing = (e) => /not found|404|is not supported|unsupported model|no longer available|deprecated/i.test(String(e?.message || e));
+/** Model missing, or the connection dropped (Safari "Load failed"): worth trying the next model. */
+const tryNext = (e) => /not found|404|is not supported|unsupported model|no longer available|deprecated|load failed|failed to fetch|networkerror|network error/i
+  .test(String(e?.message || e));
+
+const REMEMBER = "cairn.geminiModel";
+const remembered = () => { try { return localStorage.getItem(REMEMBER); } catch { return null; } };
+const remember = (m) => { try { localStorage.setItem(REMEMBER, m); } catch {} };
 
 /** files: [{ mimeType, data (base64) }], text: the request. Tries each model in turn. Returns { summary, tasks }. */
 export async function planWithGemini(fb, app, { models, files, text }) {
@@ -45,8 +50,10 @@ export async function planWithGemini(fb, app, { models, files, text }) {
     ...files.map((f) => ({ type: "inlineData", inlineData: { mimeType: f.mimeType, data: f.data } })),
     { type: "text", text },
   ];
+  const last = remembered();
+  const order = last && models.includes(last) ? [last, ...models.filter((m) => m !== last)] : models;
   let lastError;
-  for (const model of models) {
+  for (const model of order) {
     try {
       const gemini = fb.getGenerativeModel(ai, {
         model,
@@ -54,11 +61,13 @@ export async function planWithGemini(fb, app, { models, files, text }) {
         generationConfig: { responseMimeType: "application/json", responseJsonSchema: PLAN_SCHEMA },
       });
       const result = await gemini.generateContent({ contents: [{ role: "user", parts }] });
-      return JSON.parse(result.response.text());
+      const plan = JSON.parse(result.response.text());
+      remember(model);
+      return plan;
     } catch (e) {
       lastError = e;
-      if (!modelMissing(e)) throw e;
-      console.warn(`Gemini model ${model} unavailable, trying the next one`, e);
+      if (!tryNext(e)) throw e;
+      console.warn(`Gemini model ${model} failed, trying the next one`, e);
     }
   }
   throw lastError;

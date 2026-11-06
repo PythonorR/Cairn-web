@@ -1,7 +1,7 @@
-import { html, useRef } from "../vendor/preact-htm.js";
+import { html, useRef, useState } from "../vendor/preact-htm.js";
 import { uid } from "./logic.js";
 import { t } from "./i18n.js";
-import { colorVar, Icon, PALETTE_NAMES } from "./ui.js";
+import { colorVar, Icon, PALETTE_NAMES, Sheet } from "./ui.js";
 
 /** Next unused palette colour. */
 export function nextColor(subjects) {
@@ -47,4 +47,24 @@ export function SubjectsEditor({ subjects, onChange }) {
     <button type="button" class="add-row" onClick=${add}>
       <${Icon.plus}/> ${t("addSubject")}</button>
   </div>`;
+}
+
+/** Quick "new subject" sheet used from the Day view and the quick-add bar. */
+export function NewSubjectSheet({ subjects, onAdd, onClose }) {
+  const [name, setName] = useState("");
+  const [color, setColor] = useState(nextColor(subjects));
+  const trimmed = name.trim();
+  const save = () => { if (!trimmed) return; onAdd({ id: uid(), name: trimmed, color }); onClose(); };
+  return html`<${Sheet} title=${t("addSubject")} onClose=${onClose}
+      left=${html`<button class="text-btn" onClick=${onClose}>${t("cancel")}</button>`}
+      right=${html`<button class="text-btn strong" disabled=${!trimmed} onClick=${save}>${t("save")}</button>`}>
+    <label class="field big"><span class="label-text">${t("subjectName")}</span>
+      <input value=${name} placeholder="STAT 134" autofocus onInput=${(e) => setName(e.target.value)}
+             onKeyDown=${(e) => e.key === "Enter" && save()}/></label>
+    <div class="swatches new-subject-swatches" role="radiogroup" aria-label=${t("colour")}>
+      ${[0, 1, 2, 3, 4, 5].map((c) => html`<button type="button" role="radio" aria-checked=${color === c} aria-label=${PALETTE_NAMES[c]}
+          class=${`swatch${color === c ? " on" : ""}`} style=${`--c:${colorVar(c)}`} onClick=${() => setColor(c)}><i></i></button>`)}
+    </div>
+    <p class="footnote">${t("subjectsLater")}</p>
+  <//>`;
 }

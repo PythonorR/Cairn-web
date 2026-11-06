@@ -9,7 +9,7 @@ import { t } from "./i18n.js";
 import { ItemEditor } from "./editor.js";
 import { Settings } from "./settings.js";
 import { AIPlanner } from "./ai.js";
-import { HabitPills } from "./habits.js";
+import { NewSubjectSheet } from "./subjects.js";
 
 const TABS = [["day", "tabDay"], ["week", "tabWeek"], ["month", "tabMonth"], ["progress", "tabProgress"]];
 
@@ -21,11 +21,18 @@ export function PlannerScreen({ store, state, planner, canUseAI, onDeleted }) {
   const [editor, setEditor] = useState(null);   // { item, isNew }
   const [settings, setSettings] = useState(false);
   const [ai, setAI] = useState(false);
+  const [subjectSheet, setSubjectSheet] = useState(false);
   const first = useMemo(() => firstWeekday(), []);
   const id = planner.id;
 
   const openDay = (d) => { setSel(d); setTab("day"); scrollTo(0, 0); };
   const validSubject = subjectOf(planner, quickSubject)?.id ?? null;
+
+  const addSubject = (sub) => {
+    store.update(id, { subjects: [...planner.subjects, sub] });
+    setQuickSubject(sub.id);
+  };
+  const isPast = sel < today;
 
   const actions = {
     onEdit: (item) => setEditor({ item, isNew: false }),
@@ -52,18 +59,22 @@ export function PlannerScreen({ store, state, planner, canUseAI, onDeleted }) {
     </nav>
 
     <main class="grow">
-      ${tab === "day" && html`<${DayTab} store=${store} habits=${state.habits} planner=${planner} sel=${sel} setSel=${setSel} today=${today} first=${first} actions=${actions}/>`}
+      ${tab === "day" && html`<${DayTab} planner=${planner} onNewSubject=${() => setSubjectSheet(true)} sel=${sel} setSel=${setSel} today=${today} first=${first} actions=${actions}/>`}
       ${tab === "week" && html`<${WeekTab} planner=${planner} sel=${sel} setSel=${setSel} today=${today} first=${first} actions=${actions}/>`}
       ${tab === "month" && html`<${MonthTab} planner=${planner} sel=${sel} setSel=${setSel} today=${today} first=${first} actions=${actions}/>`}
       ${tab === "progress" && html`<${ProgressTab} planner=${planner} today=${today}/>`}
     </main>
 
     ${tab !== "progress" && html`<${QuickAdd} planner=${planner} date=${sel} today=${today}
-        subjectId=${validSubject} setSubjectId=${setQuickSubject}
+        subjectId=${validSubject} setSubjectId=${setQuickSubject} past=${isPast}
+        onNewSubject=${() => setSubjectSheet(true)} onToday=${() => setSel(today)}
         onAdd=${(title) => store.add(id, [newItem({ title, subjectId: validSubject, date: sel })])}
-        onMore=${(title) => setEditor({ item: newItem({ title, subjectId: validSubject, date: sel }), isNew: true })}/>`}
+        onMore=${(title) => setEditor(isPast
+          ? { item: newItem({ title, kind: "event", date: sel }), isNew: true, eventOnly: true }
+          : { item: newItem({ title, subjectId: validSubject, date: sel }), isNew: true })}/>`}
 
-    ${editor && html`<${ItemEditor} store=${store} planner=${planner} item=${editor.item} isNew=${editor.isNew}
+    ${subjectSheet && html`<${NewSubjectSheet} subjects=${planner.subjects} onAdd=${addSubject} onClose=${() => setSubjectSheet(false)}/>`}
+    ${editor && html`<${ItemEditor} store=${store} planner=${planner} item=${editor.item} isNew=${editor.isNew} eventOnly=${!!editor.eventOnly}
         onClose=${() => setEditor(null)}/>`}
     ${settings && html`<${Settings} store=${store} planner=${planner} onClose=${() => setSettings(false)} onDeleted=${onDeleted}/>`}
     ${ai && html`<${AIPlanner} store=${store} planner=${planner} today=${today} defaultSubject=${validSubject}
@@ -72,7 +83,7 @@ export function PlannerScreen({ store, state, planner, canUseAI, onDeleted }) {
 }
 
 // ---------- quick add ----------
-function QuickAdd({ planner, date, today, subjectId, setSubjectId, onAdd, onMore }) {
+function QuickAdd({ planner, date, today, subjectId, setSubjectId, past, onNewSubject, onToday, onAdd, onMore }) {
   const [text, setText] = useState("");
   const [flash, setFlash] = useState(0); // bumps on Tab so the subject name pops up briefly
   const subject = subjectOf(planner, subjectId);
@@ -94,14 +105,24 @@ function QuickAdd({ planner, date, today, subjectId, setSubjectId, onAdd, onMore
     onAdd(title);
     setText("");
   };
+  if (past) {
+    return html`<div class="bottom quick">
+      <div class="quick-bar past" role="status">
+        <span class="grow past-note">${t("pastNoAdd")}</span>
+        <button type="button" class="pill" onClick=${onToday}>${t("goTodayShort")}</button>
+        <button type="button" class="icon" aria-label=${t("addEvent")} title=${t("addEvent")} onClick=${() => onMore("")}><${Icon.more}/></button>
+      </div>
+    </div>`;
+  }
   return html`<form class="bottom quick" onSubmit=${submit}>
     <div class="quick-bar">
       <label class="quick-dot" style=${`--c:${colorVar(subject?.color)}`} title=${t("subject")}>
         <span class="dot"></span>
         <select aria-label=${`${t("subject")}: ${subject?.name || t("noSubject")}`} value=${subject?.id || ""}
-                onChange=${(e) => setSubjectId(e.target.value || null)}>
+                onChange=${(e) => { if (e.target.value === "__new") { e.target.value = subject?.id || ""; onNewSubject(); } else setSubjectId(e.target.value || null); }}>
           <option value="">${t("noSubject")}</option>
           ${planner.subjects.map((s) => html`<option value=${s.id}>${s.name || t("untitledSubject")}</option>`)}
+          <option value="__new">${t("newSubjectOption")}</option>
         </select>
       </label>
       ${flash > 0 && html`<span key=${flash} class="subject-flash" style=${`--c:${colorVar(subject?.color)}`} role="status">
@@ -116,7 +137,7 @@ function QuickAdd({ planner, date, today, subjectId, setSubjectId, onAdd, onMore
 }
 
 // ---------- day ----------
-function DayTab({ store, habits, planner, sel, setSel, today, first, actions }) {
+function DayTab({ planner, onNewSubject, sel, setSel, today, first, actions }) {
   const tl = tally(itemsOn(planner, sel));
   return html`<div>
     <${DueBar} items=${dueSoon(planner.items, today)} today=${today}/>
@@ -126,7 +147,10 @@ function DayTab({ store, habits, planner, sel, setSel, today, first, actions }) 
       <p class="muted">${F.fullDay(sel)} · ${t("ofDone", { done: tl.done, total: tl.total })}</p>
     </div>
 
-    <${HabitPills} store=${store} habits=${habits} day=${sel}/>
+    ${planner.subjects.length === 0 && html`<div class="pad subject-prompt">
+      <p class="muted">${t("noSubjectsYet")}</p>
+      <button class="add-inline" onClick=${onNewSubject}><${Icon.plus}/> ${t("addSubject")}</button>
+    </div>`}
 
     <${DayList} planner=${planner} day=${sel} empty=${t("nothingPlanned")} ...${actions}/>
   </div>`;

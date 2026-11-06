@@ -218,7 +218,7 @@ export function AIPlanner({ store, planner, today, defaultSubject, onClose, onAd
         ${planner.subjects.map((s) => html`<option value=${s.id}>${s.name || t("untitledSubject")}</option>`)}
       </select></label>
     <label class="field"><span>${t("start")}</span>
-      <input type="date" value=${start} disabled=${busy} onChange=${(e) => { const v = e.target.value; if (v) { setStart(v); if (finish < v) setFinish(v); } }}/></label>
+      <input type="date" value=${start} min=${today} disabled=${busy} onChange=${(e) => { const v = e.target.value; if (v) { setStart(v); if (finish < v) setFinish(v); } }}/></label>
     <label class="field"><span>${t("finishBy")}</span>
       <input type="date" value=${finish} min=${start} disabled=${busy} onChange=${(e) => e.target.value && setFinish(e.target.value)}/></label>
     <label class="field"><span>${t("dailyTime")}</span>

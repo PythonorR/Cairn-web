@@ -35,42 +35,24 @@ export function HabitSheet({ store, habit, onClose }) {
   <//>`;
 }
 
-/** Day view: one capsule per habit; tap to check it for the day on screen. */
-export function HabitPills({ store, habits, day }) {
-  const [sheet, setSheet] = useState(false);
-  return html`<div class="pad habit-pills-wrap">
-    <div class="habit-pills" role="group" aria-label=${t("habits")}>
-      ${habits.map((h) => {
-        const on = (h.days || []).includes(day);
-        return html`<button key=${h.id} class=${`habit-pill${on ? " on" : ""}`} aria-pressed=${on}
-            aria-label=${on ? t("unmarkHabit", { title: h.name }) : t("markHabit", { title: h.name })}
-            onClick=${() => { haptic(); store.toggleHabit(h.id, day); }}>
-          <span class="pill-check" aria-hidden="true">${on && html`<${Icon.check}/>`}</span>
-          <span>${h.name}</span>
-        </button>`;
-      })}
-      <button class="habit-pill add" onClick=${() => setSheet(true)} aria-label=${t("addHabit")}>
-        <${Icon.plus}/>${!habits.length && html`<span>${t("addFirstHabit")}</span>`}
-      </button>
-    </div>
-    ${sheet && html`<${HabitSheet} store=${store} habit=${null} onClose=${() => setSheet(false)}/>`}
-  </div>`;
-}
-
-/** First screen: how each habit is going — total days, current run, and the last 14 days. */
+/** First screen: check today's habits, add new ones, and see each one's last 14 days. */
 export function HabitsOverview({ store, habits, today }) {
-  const [sheet, setSheet] = useState(null);
-  if (!habits.length) return null;
+  const [sheet, setSheet] = useState(null); // habit, "new", or null
   const days = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13));
   return html`<section class="habits-home" aria-label=${t("habits")}>
-    <h2 class="label muted">${t("habits")}</h2>
+    <h2 class="label muted">${t("habitsToday")}</h2>
     ${habits.map((h) => {
       const set = new Set(h.days || []);
+      const on = set.has(today);
       const s = habitStats(h.days, today);
-      return html`<button key=${h.id} class="habit-card" onClick=${() => setSheet(h)}
-          aria-label=${`${h.name}, ${t("habitDay", { n: s.total })}${s.streak >= 2 ? `, ${t("habitStreak", { n: s.streak })}` : ""}`}>
+      return html`<div key=${h.id} class=${`habit-card${on ? " is-on" : ""}`}>
         <span class="habit-card-top">
-          <span class="habit-name">${h.name}</span>
+          <button class="habit-check" aria-pressed=${on}
+              aria-label=${on ? t("unmarkHabit", { title: h.name }) : t("markHabit", { title: h.name })}
+              onClick=${() => { haptic(); store.toggleHabit(h.id, today); }}>
+            <span class=${`circle habit${on ? " on" : ""}`}>${on && html`<${Icon.check}/>`}</span>
+          </button>
+          <button class="habit-name" onClick=${() => setSheet(h)} aria-label=${`${h.name}, ${t("editHabit")}`}>${h.name}</button>
           <span class="habit-count"><b>${s.total}</b><small>${t("daysUnit")}</small></span>
         </span>
         <span class="habit-dots" aria-hidden="true">
@@ -80,8 +62,9 @@ export function HabitsOverview({ store, habits, today }) {
           <span>${s.streak >= 2 ? t("habitStreak", { n: s.streak }) : s.total ? t("habitKeepGoing") : t("habitNotStarted")}</span>
           <span>${t("last14")}</span>
         </span>
-      </button>`;
+      </div>`;
     })}
-    ${sheet && html`<${HabitSheet} store=${store} habit=${sheet} onClose=${() => setSheet(null)}/>`}
+    <button class="add-inline habit-add" onClick=${() => setSheet("new")}><${Icon.plus}/> ${habits.length ? t("addHabit") : t("addFirstHabit")}</button>
+    ${sheet && html`<${HabitSheet} store=${store} habit=${sheet === "new" ? null : sheet} onClose=${() => setSheet(null)}/>`}
   </section>`;
 }
